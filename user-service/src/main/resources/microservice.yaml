@@ -1,0 +1,18 @@
+APPLICATION_ID: scaffold
+service_description:
+  name: user-service
+  version: 0.0.1
+cse:
+  service:
+    registry:
+      address: http://127.0.0.1:30100
+      instance:
+        watch: false
+  rest:
+    address: 0.0.0.0:8092
+    server:
+      thread-count: 10
+  handler:
+    chain:
+      Consumer:
+        default: loadbalance

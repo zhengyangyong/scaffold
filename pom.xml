@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.servicecomb.scaffold</groupId>
   <artifactId>scaffold</artifactId>
-  <version>0.0.3-SNAPSHOT</version>
+  <version>0.0.4-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <modules>
@@ -36,7 +36,7 @@
       <dependency>
         <groupId>org.apache.servicecomb.scaffold</groupId>
         <artifactId>common</artifactId>
-        <version>0.0.3-SNAPSHOT</version>
+        <version>0.0.4-SNAPSHOT</version>
       </dependency>
 
       <dependency>

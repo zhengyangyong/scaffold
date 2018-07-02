@@ -1,0 +1,18 @@
+APPLICATION_ID: scaffold
+service_description:
+  name: edge-service
+  version: 0.0.1
+cse:
+  service:
+    registry:
+      address: http://127.0.0.1:30100
+  rest:
+    address: 0.0.0.0:8090
+    server:
+      thread-count: 8
+    client:
+      thread-count: 8
+
+edge:
+  routing-short-path:
+    user: user-service

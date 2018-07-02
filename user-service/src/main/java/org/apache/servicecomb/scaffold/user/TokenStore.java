@@ -20,5 +20,5 @@ package org.apache.servicecomb.scaffold.user;
 public interface TokenStore {
   String generate(String userName);
 
-  boolean validate(String token);
+  String validate(String token);
 }

@@ -55,13 +55,12 @@ public class JwtTokenStore implements TokenStore {
   }
 
   @Override
-  public boolean validate(String token) {
+  public String validate(String token) {
     try {
-      return StringUtils
-          .isNotEmpty(Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody().getSubject());
+      return Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody().getSubject();
     } catch (JwtException | IllegalArgumentException e) {
       LOGGER.info("validateToken token : " + token + " failed", e);
     }
-    return false;
+    return null;
   }
 }

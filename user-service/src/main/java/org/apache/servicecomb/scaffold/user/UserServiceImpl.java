@@ -21,9 +21,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 public class UserServiceImpl implements UserService {
   private final UserRepository repository;
 
+  private final TokenStore tokenStore;
+
   @Autowired
-  public UserServiceImpl(UserRepository repository) {
+  public UserServiceImpl(UserRepository repository, TokenStore tokenStore) {
     this.repository = repository;
+    this.tokenStore = tokenStore;
   }
 
   @Override
@@ -48,7 +51,10 @@ public class UserServiceImpl implements UserService {
       UserEntity dbUser = repository.findByName(user.getName());
       if (dbUser != null) {
         if (dbUser.getPassword().equals(user.getPassword())) {
-          return new ResponseEntity<>(true, HttpStatus.OK);
+          String token = tokenStore.generate(user.getName());
+          HttpHeaders headers = generateAuthenticationHeaders(token);
+          //add authentication header
+          return new ResponseEntity<>(true, headers, HttpStatus.OK);
         }
         throw new InvocationException(BAD_REQUEST, "wrong password");
       }
@@ -59,5 +65,11 @@ public class UserServiceImpl implements UserService {
 
   private boolean validateUser(UserDTO user) {
     return user != null && StringUtils.isNotEmpty(user.getName()) && StringUtils.isNotEmpty(user.getPassword());
+  }
+
+  private HttpHeaders generateAuthenticationHeaders(String token) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.add(AUTHORIZATION, token);
+    return headers;
   }
 }

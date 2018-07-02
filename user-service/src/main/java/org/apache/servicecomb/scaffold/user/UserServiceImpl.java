@@ -1,6 +1,7 @@
 package org.apache.servicecomb.scaffold.user;
 
 import static javax.ws.rs.core.Response.Status.BAD_REQUEST;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.servicecomb.provider.rest.common.RestSchema;
@@ -8,7 +9,9 @@ import org.apache.servicecomb.scaffold.user.api.UserDTO;
 import org.apache.servicecomb.scaffold.user.api.UserService;
 import org.apache.servicecomb.swagger.invocation.exception.InvocationException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,13 +28,13 @@ public class UserServiceImpl implements UserService {
 
   @Override
   @PostMapping(path = "logon")
-  public long logon(@RequestBody UserDTO user) {
-    if (validateLogonUser(user)) {
+  public ResponseEntity<Boolean> logon(@RequestBody UserDTO user) {
+    if (validateUser(user)) {
       UserEntity dbUser = repository.findByName(user.getName());
       if (dbUser == null) {
-        UserEntity entity = new UserEntity(user.getName(), user.getPassword(), user.getDeposit());
+        UserEntity entity = new UserEntity(user.getName(), user.getPassword());
         repository.save(entity);
-        return entity.getId();
+        return new ResponseEntity<>(true, HttpStatus.OK);
       }
       throw new InvocationException(BAD_REQUEST, "user name had exist");
     }
@@ -40,12 +43,12 @@ public class UserServiceImpl implements UserService {
 
   @Override
   @PostMapping(path = "login")
-  public long login(@RequestBody UserDTO user) {
-    if (validateLoginUser(user)) {
+  public ResponseEntity<Boolean> login(@RequestBody UserDTO user) {
+    if (validateUser(user)) {
       UserEntity dbUser = repository.findByName(user.getName());
       if (dbUser != null) {
         if (dbUser.getPassword().equals(user.getPassword())) {
-          return dbUser.getId();
+          return new ResponseEntity<>(true, HttpStatus.OK);
         }
         throw new InvocationException(BAD_REQUEST, "wrong password");
       }
@@ -54,22 +57,7 @@ public class UserServiceImpl implements UserService {
     throw new InvocationException(BAD_REQUEST, "incorrect user");
   }
 
-  @Override
-  @GetMapping(path = "getUserInfo")
-  public UserDTO getUserInfo(String name) {
-    UserEntity dbUser = repository.findByName(name);
-    if (dbUser != null) {
-      return new UserDTO(dbUser.getId(), dbUser.getName(), null, dbUser.getDeposit());
-    }
-    throw new InvocationException(BAD_REQUEST, "user name not exist");
-  }
-
-  private boolean validateLogonUser(UserDTO user) {
-    return user != null && StringUtils.isNotEmpty(user.getName()) && StringUtils.isNotEmpty(user.getPassword())
-        && user.getDeposit() > 0;
-  }
-
-  private boolean validateLoginUser(UserDTO user) {
+  private boolean validateUser(UserDTO user) {
     return user != null && StringUtils.isNotEmpty(user.getName()) && StringUtils.isNotEmpty(user.getPassword());
   }
 }

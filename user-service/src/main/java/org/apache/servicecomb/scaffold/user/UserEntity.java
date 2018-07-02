@@ -10,22 +10,9 @@ import javax.persistence.Table;
 @Table(name = "T_User")
 public class UserEntity {
   @Id
-  @GeneratedValue(strategy = GenerationType.AUTO)
-  private long id;
-
   private String name;
 
   private String password;
-
-  private Double deposit;
-
-  public long getId() {
-    return id;
-  }
-
-  public void setId(long id) {
-    this.id = id;
-  }
 
   public String getName() {
     return name;
@@ -43,20 +30,11 @@ public class UserEntity {
     this.password = password;
   }
 
-  public Double getDeposit() {
-    return deposit;
-  }
-
-  public void setDeposit(Double deposit) {
-    this.deposit = deposit;
-  }
-
   public UserEntity() {
   }
 
-  public UserEntity(String name, String password, Double balance) {
+  public UserEntity(String name, String password) {
     this.name = name;
     this.password = password;
-    this.deposit = balance;
   }
 }

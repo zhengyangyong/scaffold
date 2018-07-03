@@ -13,6 +13,7 @@
     <module>user-service</module>
     <module>edge-service</module>
     <module>payment-service</module>
+    <module>payment-service-canary</module>
   </modules>
 
   <properties>

@@ -51,33 +51,31 @@ public class AuthenticationFilter implements EdgeFilter {
 
   @Override
   public void processing(String serviceName, String operationPath, RoutingContext context) throws InvocationException {
-    if (isNotRequiredVerificationUserServiceMethod(serviceName, operationPath)) {
-      return;
-    }
-
-    String token = context.request().headers().get(AUTHORIZATION);
-    if (StringUtils.isNotEmpty(token)) {
-      String userName = template
-          .getForObject("cse://" + USER_SERVICE_NAME + "/validate?token={token}", String.class, token);
-      if (StringUtils.isNotEmpty(userName)) {
-        //Add header
-        context.request().headers().add(EDGE_AUTHENTICATION_NAME, userName);
+    if (isInvocationNeedValidate(serviceName, operationPath)) {
+      String token = context.request().headers().get(AUTHORIZATION);
+      if (StringUtils.isNotEmpty(token)) {
+        String userName = template
+            .getForObject("cse://" + USER_SERVICE_NAME + "/validate?token={token}", String.class, token);
+        if (StringUtils.isNotEmpty(userName)) {
+          //Add header
+          context.request().headers().add(EDGE_AUTHENTICATION_NAME, userName);
+        } else {
+          throw new InvocationException(Status.UNAUTHORIZED, "authentication failed, invalid token");
+        }
       } else {
-        throw new InvocationException(Status.UNAUTHORIZED, "authentication failed, invalid token");
+        throw new InvocationException(Status.UNAUTHORIZED, "authentication failed, missing AUTHORIZATION header");
       }
-    } else {
-      throw new InvocationException(Status.UNAUTHORIZED, "authentication failed, missing AUTHORIZATION header");
     }
   }
 
-  private boolean isNotRequiredVerificationUserServiceMethod(String serviceName, String operationPath) {
+  private boolean isInvocationNeedValidate(String serviceName, String operationPath) {
     if (USER_SERVICE_NAME.equals(serviceName)) {
       for (String method : NOT_REQUIRED_VERIFICATION_USER_SERVICE_METHODS) {
         if (operationPath.startsWith(method)) {
-          return true;
+          return false;
         }
       }
     }
-    return false;
+    return true;
   }
 }

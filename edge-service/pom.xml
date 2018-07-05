@@ -13,6 +13,10 @@
   <dependencies>
     <dependency>
       <groupId>org.apache.servicecomb</groupId>
+      <artifactId>provider-springmvc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.servicecomb</groupId>
       <artifactId>edge-core</artifactId>
     </dependency>
     <dependency>
@@ -20,5 +24,4 @@
       <artifactId>slf4j-log4j12</artifactId>
     </dependency>
   </dependencies>
-
 </project>

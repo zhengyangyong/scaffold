@@ -2,22 +2,27 @@ package org.apache.servicecomb.scaffold.edge;
 
 import static org.springframework.http.HttpHeaders.CONTENT_LENGTH;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.servicecomb.edge.core.AbstractEdgeDispatcher;
 import org.apache.servicecomb.edge.core.EdgeInvocation;
 import org.apache.servicecomb.foundation.common.utils.SPIServiceUtils;
-import org.apache.servicecomb.serviceregistry.definition.DefinitionConst;
+import org.apache.servicecomb.scaffold.edge.darklaunch.DarkLaunchRule;
 import org.apache.servicecomb.swagger.invocation.exception.InvocationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.config.DynamicPropertyFactory;
+import com.netflix.config.DynamicStringProperty;
 
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -27,6 +32,10 @@ public class EdgeDispatcher extends AbstractEdgeDispatcher {
   private static final Logger LOGGER = LoggerFactory.getLogger(EdgeDispatcher.class);
 
   private final List<EdgeFilter> filterChain;
+
+  private static final ObjectMapper OBJ_MAPPER = new ObjectMapper();
+
+  private final Map<String, DarkLaunchRule> darkLaunchRules = new ConcurrentHashMap<>();
 
   public EdgeDispatcher() {
     filterChain = SPIServiceUtils.getSortedService(EdgeFilter.class);
@@ -58,10 +67,16 @@ public class EdgeDispatcher extends AbstractEdgeDispatcher {
     final String serviceName = DynamicPropertyFactory.getInstance()
         .getStringProperty("edge.routing-short-path." + service, service).get();
 
+    darkLaunchRules.computeIfAbsent(serviceName, s -> {
+      DynamicStringProperty property = DynamicPropertyFactory.getInstance()
+          .getStringProperty("edge.dark-launch-rules." + serviceName, "");
+      return parseRule(property.getValue());
+    });
+
     //创建一个Edge转发
     EdgeInvocation edgeInvocation = new EdgeInvocation();
-    //允许接受任意版本的微服务实例作为Provider，未来我们会使用此（设置版本）能力实现灰度发布
-    edgeInvocation.setVersionRule(DefinitionConst.VERSION_RULE_ALL);
+    //设定灰度版本策略
+    edgeInvocation.setVersionRule(darkLaunchRules.get(serviceName).matchVersion(context.request().headers().entries()));
     edgeInvocation.init(serviceName, context, operationPath, httpServerFilters);
 
     //处理Filter链并转发请求
@@ -104,5 +119,16 @@ public class EdgeDispatcher extends AbstractEdgeDispatcher {
     context.response().headers().add(CONTENT_LENGTH, String.valueOf(exception.getMessage().length()));
     context.response().write(exception.getMessage());
     context.response().end();
+  }
+
+  private DarkLaunchRule parseRule(String config) {
+    try {
+      if (StringUtils.isNotEmpty(config)) {
+        return OBJ_MAPPER.readValue(config, DarkLaunchRule.class);
+      }
+    } catch (IOException e) {
+      LOGGER.error("parse rule failed", e);
+    }
+    return new DarkLaunchRule();
   }
 }

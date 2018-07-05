@@ -17,3 +17,5 @@ edge:
   routing-short-path:
     user: user-service
     payment: payment-service
+  dark-launch-rules:
+    payment-service: "{\"headerRules\":{\"User-Agent\":[{\"operator\":\"CONTAINS\",\"value\":\"vip\",\"version\":\"0.0.2\"}]},\"defaultVersion\":\"0.0.1\"}"

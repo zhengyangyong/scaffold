@@ -17,5 +17,24 @@ edge:
   routing-short-path:
     user: user-service
     payment: payment-service
-  dark-launch-rules:
-    payment-service: "{\"headerRules\":{\"User-Agent\":[{\"operator\":\"CONTAINS\",\"value\":\"vip\",\"version\":\"0.0.2\"}]},\"defaultVersion\":\"0.0.1\"}"
+#  停用本地配置，使用apollo配置中心配置
+#  dark-launch-rules:
+#    payment-service: "{\"headerRules\":{\"User-Agent\":[{\"operator\":\"CONTAINS\",\"value\":\"vip\",\"version\":\"0.0.2\"}]},\"defaultVersion\":\"0.0.1\"}"
+
+#配置中心
+apollo:
+  config:
+    #请修改为您的Apollo地址
+    serverUri: http://192.168.99.100:8070
+    #请修改为您的Apollo AppId
+    serviceName: scaffold  #AppId in apollo
+    env: DEV
+    #default clusters name in apollo,if user create new clusters please replace this setting value
+    #more detail can be found at https://github.com/ctripcorp/apollo/wiki
+    clusters: default
+    #default namespace name in apollo,if user create new namespace please replace this setting value
+    #more detail can be found at https://github.com/ctripcorp/apollo/wiki/Apollo%E6%A0%B8%E5%BF%83%E6%A6%82%E5%BF%B5%E4%B9%8B%E2%80%9CNamespace%E2%80%9D
+    namespace: application
+    #get token from Apollo web pages
+    #请修改为您的Token
+    token: d453c813eb2e0a83bd4532bca7b0c272bc3377c9

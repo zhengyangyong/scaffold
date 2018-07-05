@@ -16,13 +16,13 @@ import org.apache.servicecomb.edge.core.AbstractEdgeDispatcher;
 import org.apache.servicecomb.edge.core.EdgeInvocation;
 import org.apache.servicecomb.foundation.common.utils.SPIServiceUtils;
 import org.apache.servicecomb.scaffold.edge.darklaunch.DarkLaunchRule;
+import org.apache.servicecomb.scaffold.edge.darklaunch.DynamicDarkLaunchRule;
 import org.apache.servicecomb.swagger.invocation.exception.InvocationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.config.DynamicPropertyFactory;
-import com.netflix.config.DynamicStringProperty;
 
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -35,7 +35,7 @@ public class EdgeDispatcher extends AbstractEdgeDispatcher {
 
   private static final ObjectMapper OBJ_MAPPER = new ObjectMapper();
 
-  private final Map<String, DarkLaunchRule> darkLaunchRules = new ConcurrentHashMap<>();
+  private final Map<String, DynamicDarkLaunchRule> darkLaunchRules = new ConcurrentHashMap<>();
 
   public EdgeDispatcher() {
     filterChain = SPIServiceUtils.getSortedService(EdgeFilter.class);
@@ -67,16 +67,14 @@ public class EdgeDispatcher extends AbstractEdgeDispatcher {
     final String serviceName = DynamicPropertyFactory.getInstance()
         .getStringProperty("edge.routing-short-path." + service, service).get();
 
-    darkLaunchRules.computeIfAbsent(serviceName, s -> {
-      DynamicStringProperty property = DynamicPropertyFactory.getInstance()
-          .getStringProperty("edge.dark-launch-rules." + serviceName, "");
-      return parseRule(property.getValue());
-    });
+    //检查灰度策略是否更新
+    checkDarkLaunchRule(serviceName);
 
     //创建一个Edge转发
     EdgeInvocation edgeInvocation = new EdgeInvocation();
     //设定灰度版本策略
-    edgeInvocation.setVersionRule(darkLaunchRules.get(serviceName).matchVersion(context.request().headers().entries()));
+    edgeInvocation.setVersionRule(
+        darkLaunchRules.get(serviceName).getRule().matchVersion(context.request().headers().entries()));
     edgeInvocation.init(serviceName, context, operationPath, httpServerFilters);
 
     //处理Filter链并转发请求
@@ -119,6 +117,19 @@ public class EdgeDispatcher extends AbstractEdgeDispatcher {
     context.response().headers().add(CONTENT_LENGTH, String.valueOf(exception.getMessage().length()));
     context.response().write(exception.getMessage());
     context.response().end();
+  }
+
+  private void checkDarkLaunchRule(String serviceName) {
+    final String config = DynamicPropertyFactory.getInstance()
+        .getStringProperty("edge.dark-launch-rules." + serviceName, "").getValue();
+    if (darkLaunchRules.containsKey(serviceName)) {
+      DynamicDarkLaunchRule rule = darkLaunchRules.get(serviceName);
+      if (!rule.getConfig().equals(config)) {
+        darkLaunchRules.put(serviceName, new DynamicDarkLaunchRule(config, parseRule(config)));
+      }
+    } else {
+      darkLaunchRules.computeIfAbsent(serviceName, s -> new DynamicDarkLaunchRule(config, parseRule(config)));
+    }
   }
 
   private DarkLaunchRule parseRule(String config) {

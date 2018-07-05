@@ -91,7 +91,11 @@ public class EdgeDispatcher extends AbstractEdgeDispatcher {
         }
       });
     } else {
-      edgeInvocation.edgeInvoke();
+      try {
+        edgeInvocation.edgeInvoke();
+      } catch (InvocationException e) {
+        sendFailed(context, e);
+      }
     }
   }
 

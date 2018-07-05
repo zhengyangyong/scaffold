@@ -7,6 +7,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.servicecomb.provider.rest.common.RestSchema;
 import org.apache.servicecomb.scaffold.user.api.UserDTO;
 import org.apache.servicecomb.scaffold.user.api.UserService;
+import org.apache.servicecomb.scaffold.user.api.UserUpdateDTO;
 import org.apache.servicecomb.swagger.invocation.exception.InvocationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -63,8 +64,31 @@ public class UserServiceImpl implements UserService {
     throw new InvocationException(BAD_REQUEST, "incorrect user");
   }
 
+  @Override
+  @PostMapping(path = "changePassword")
+  public ResponseEntity<Boolean> changePassword(@RequestBody UserUpdateDTO userUpdate) {
+    if (validateUserUpdate(userUpdate)) {
+      UserEntity dbUser = repository.findByName(userUpdate.getName());
+      if (dbUser != null) {
+        if (dbUser.getPassword().equals(userUpdate.getOldPassword())) {
+          dbUser.setPassword(userUpdate.getNewPassword());
+          repository.save(dbUser);
+          return new ResponseEntity<>(true, HttpStatus.OK);
+        }
+        throw new InvocationException(BAD_REQUEST, "wrong password");
+      }
+      throw new InvocationException(BAD_REQUEST, "user name not exist");
+    }
+    throw new InvocationException(BAD_REQUEST, "incorrect user");
+  }
+
   private boolean validateUser(UserDTO user) {
     return user != null && StringUtils.isNotEmpty(user.getName()) && StringUtils.isNotEmpty(user.getPassword());
+  }
+
+  private boolean validateUserUpdate(UserUpdateDTO user) {
+    return user != null && StringUtils.isNotEmpty(user.getName()) && StringUtils.isNotEmpty(user.getOldPassword())
+        && StringUtils.isNotEmpty(user.getNewPassword());
   }
 
   private HttpHeaders generateAuthenticationHeaders(String token) {

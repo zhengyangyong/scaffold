@@ -14,6 +14,7 @@
     <module>edge-service</module>
     <module>payment-service</module>
     <module>payment-service-canary</module>
+    <module>log-service</module>
   </modules>
 
   <properties>
@@ -21,8 +22,8 @@
     <maven.compiler.target>1.8</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <spring-boot.version>1.4.5.RELEASE</spring-boot.version>
-    <java-chassis.version>1.0.0-m1</java-chassis.version>
+    <spring-boot.version>1.5.12.RELEASE</spring-boot.version>
+    <java-chassis.version>1.0.0-m2</java-chassis.version>
   </properties>
 
   <dependencyManagement>

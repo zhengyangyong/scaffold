@@ -2,7 +2,7 @@ APPLICATION_ID: scaffold
 service_description:
   name: edge-service
   version: 0.0.1
-cse:
+servicecomb:
   service:
     registry:
       address: http://127.0.0.1:30100
@@ -16,3 +16,4 @@ cse:
 edge:
   routing-short-path:
     user: user-service
+    payment: payment-service

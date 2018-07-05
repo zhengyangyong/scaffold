@@ -12,6 +12,7 @@
     <module>common</module>
     <module>user-service</module>
     <module>edge-service</module>
+    <module>payment-service</module>
   </modules>
 
   <properties>

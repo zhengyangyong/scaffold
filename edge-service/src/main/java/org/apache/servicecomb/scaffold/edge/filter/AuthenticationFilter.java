@@ -26,14 +26,15 @@ import java.util.Set;
 import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.servicecomb.common.rest.filter.HttpServerFilter;
+import org.apache.servicecomb.core.Invocation;
+import org.apache.servicecomb.foundation.vertx.http.HttpServletRequestEx;
 import org.apache.servicecomb.provider.springmvc.reference.RestTemplateBuilder;
-import org.apache.servicecomb.scaffold.edge.EdgeFilter;
+import org.apache.servicecomb.swagger.invocation.Response;
 import org.apache.servicecomb.swagger.invocation.exception.InvocationException;
 import org.springframework.web.client.RestTemplate;
 
-import io.vertx.ext.web.RoutingContext;
-
-public class AuthenticationFilter implements EdgeFilter {
+public class AuthenticationFilter implements HttpServerFilter {
 
   private final RestTemplate template = RestTemplateBuilder.create();
 
@@ -42,7 +43,7 @@ public class AuthenticationFilter implements EdgeFilter {
   public static final String EDGE_AUTHENTICATION_NAME = "edge-authentication-name";
 
   private static final Set<String> NOT_REQUIRED_VERIFICATION_USER_SERVICE_METHODS = new HashSet<>(
-      Arrays.asList("/login", "/logon", "/validate"));
+      Arrays.asList("login", "logon", "validate"));
 
   @Override
   public int getOrder() {
@@ -50,22 +51,25 @@ public class AuthenticationFilter implements EdgeFilter {
   }
 
   @Override
-  public void processing(String serviceName, String operationPath, RoutingContext context) throws InvocationException {
-    if (isInvocationNeedValidate(serviceName, operationPath)) {
-      String token = context.request().headers().get(AUTHORIZATION);
+  public Response afterReceiveRequest(Invocation invocation, HttpServletRequestEx httpServletRequestEx) {
+    if (isInvocationNeedValidate(invocation.getMicroserviceName(), invocation.getOperationName())) {
+      String token = httpServletRequestEx.getHeader(AUTHORIZATION);
       if (StringUtils.isNotEmpty(token)) {
         String userName = template
             .getForObject("cse://" + USER_SERVICE_NAME + "/validate?token={token}", String.class, token);
         if (StringUtils.isNotEmpty(userName)) {
           //Add header
-          context.request().headers().add(EDGE_AUTHENTICATION_NAME, userName);
+          invocation.getContext().put(EDGE_AUTHENTICATION_NAME, userName);
         } else {
-          throw new InvocationException(Status.UNAUTHORIZED, "authentication failed, invalid token");
+          return Response
+              .failResp(new InvocationException(Status.UNAUTHORIZED, "authentication failed, invalid token"));
         }
       } else {
-        throw new InvocationException(Status.UNAUTHORIZED, "authentication failed, missing AUTHORIZATION header");
+        return Response.failResp(
+            new InvocationException(Status.UNAUTHORIZED, "authentication failed, missing AUTHORIZATION header"));
       }
     }
+    return null;
   }
 
   private boolean isInvocationNeedValidate(String serviceName, String operationPath) {

@@ -1,23 +1,14 @@
 package org.apache.servicecomb.scaffold.edge;
 
-import static org.springframework.http.HttpHeaders.CONTENT_LENGTH;
-
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
-
-import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.servicecomb.edge.core.AbstractEdgeDispatcher;
 import org.apache.servicecomb.edge.core.EdgeInvocation;
-import org.apache.servicecomb.foundation.common.utils.SPIServiceUtils;
 import org.apache.servicecomb.scaffold.edge.darklaunch.DarkLaunchRule;
 import org.apache.servicecomb.scaffold.edge.darklaunch.DynamicDarkLaunchRule;
-import org.apache.servicecomb.swagger.invocation.exception.InvocationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,14 +22,11 @@ import io.vertx.ext.web.handler.CookieHandler;
 public class EdgeDispatcher extends AbstractEdgeDispatcher {
   private static final Logger LOGGER = LoggerFactory.getLogger(EdgeDispatcher.class);
 
-  private final List<EdgeFilter> filterChain;
-
   private static final ObjectMapper OBJ_MAPPER = new ObjectMapper();
 
   private final Map<String, DynamicDarkLaunchRule> darkLaunchRules = new ConcurrentHashMap<>();
 
   public EdgeDispatcher() {
-    filterChain = SPIServiceUtils.getSortedService(EdgeFilter.class);
   }
 
   //此Dispatcher的优先级，Order级越小，路由策略优先级越高
@@ -76,47 +64,7 @@ public class EdgeDispatcher extends AbstractEdgeDispatcher {
     edgeInvocation.setVersionRule(
         darkLaunchRules.get(serviceName).getRule().matchVersion(context.request().headers().entries()));
     edgeInvocation.init(serviceName, context, operationPath, httpServerFilters);
-
-    //处理Filter链并转发请求
-    loopExecuteEdgeFilterInChain(0, serviceName, operationPath, context, edgeInvocation);
-  }
-
-  private void loopExecuteEdgeFilterInChain(int index, String serviceName, String operationPath, RoutingContext context,
-      EdgeInvocation edgeInvocation) {
-    if (index < filterChain.size()) {
-      EdgeFilter filter = filterChain.get(index);
-      AtomicReference<InvocationException> exception = new AtomicReference<>();
-      CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-        try {
-          filter.processing(serviceName, operationPath, context);
-        } catch (InvocationException e) {
-          exception.set(e);
-        }
-      });
-
-      future.whenComplete((result, throwable) -> {
-        if (exception.get() != null) {
-          sendFailed(context, exception.get());
-        } else if (throwable != null) {
-          sendFailed(context, new InvocationException(Status.INTERNAL_SERVER_ERROR, throwable.getMessage()));
-        } else {
-          loopExecuteEdgeFilterInChain(index + 1, serviceName, operationPath, context, edgeInvocation);
-        }
-      });
-    } else {
-      try {
-        edgeInvocation.edgeInvoke();
-      } catch (InvocationException e) {
-        sendFailed(context, e);
-      }
-    }
-  }
-
-  private void sendFailed(RoutingContext context, InvocationException exception) {
-    context.response().setStatusCode(exception.getStatusCode());
-    context.response().headers().add(CONTENT_LENGTH, String.valueOf(exception.getMessage().length()));
-    context.response().write(exception.getMessage());
-    context.response().end();
+    edgeInvocation.edgeInvoke();
   }
 
   private void checkDarkLaunchRule(String serviceName) {
